@@ -7,8 +7,12 @@ import { HardhatUserConfig } from "hardhat/config";
 const config: HardhatUserConfig = {
   networks: {
     ...getHardhatConfigNetworks(),
+    zeta_testnet: {
+      ...getHardhatConfigNetworks().zeta_testnet,
+      accounts: ["YOUR_PRIVATE_KEY"],
+    },
   },
-  solidity: "0.8.7",
+  solidity: "0.8.20",
 };
 
 export default config;
