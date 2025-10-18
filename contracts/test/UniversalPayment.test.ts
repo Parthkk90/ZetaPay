@@ -13,21 +13,17 @@ describe("UniversalPayment", function () {
   let recipient: SignerWithAddress;
 
   beforeEach(async function () {
-    console.log("Starting deployment...");
     [owner, user, recipient] = await ethers.getSigners();
 
     const MockZRC20Factory = await ethers.getContractFactory("MockZRC20");
     mockZRC20_A = await MockZRC20Factory.deploy("Mock Token A", "MTA");
     mockZRC20_B = await MockZRC20Factory.deploy("Mock Token B", "MTB");
-    console.log("Mocks ZRC20 deployed.");
 
     const MockRouterFactory = await ethers.getContractFactory("MockUniswapV2Router");
     mockRouter = await MockRouterFactory.deploy();
-    console.log("Mock router deployed.");
 
     const UniversalPaymentFactory = await ethers.getContractFactory("UniversalPayment");
     universalPayment = await UniversalPaymentFactory.deploy(ethers.constants.AddressZero);
-    console.log("UniversalPayment deployed.");
 
     await mockZRC20_A.mint(user.address, ethers.utils.parseEther("100"));
   });
