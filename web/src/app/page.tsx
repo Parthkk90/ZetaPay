@@ -3,6 +3,7 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ConnectBitcoin } from "@zetachain/universalkit";
 import { Welcome } from "./welcome";
+import { Payment } from "./Payment";
 
 const Page = () => {
   return (
@@ -12,8 +13,8 @@ const Page = () => {
         <ConnectButton label="Connect EVM" showBalance={false} />
       </div>
       <Welcome />
-      <div className="flex justify-center">
-        <div className="w-[400px]">{/* Add components here */}</div>
+      <div className="flex justify-center mt-10">
+        <Payment />
       </div>
     </div>
   );
