@@ -8,11 +8,17 @@ import * as dotenv from "dotenv";
 // Load environment variables from .env file
 dotenv.config();
 
+const zetaNetworks = getHardhatConfigNetworks();
+
 const config: HardhatUserConfig = {
   networks: {
-    ...getHardhatConfigNetworks(),
+    hardhat: {
+      // Use built-in Hardhat network for testing (no forking)
+      chainId: 31337,
+      allowUnlimitedContractSize: true,
+    },
     zeta_testnet: {
-      ...getHardhatConfigNetworks().zeta_testnet,
+      ...(zetaNetworks.zeta_testnet || {}),
       // Only add accounts if PRIVATE_KEY is defined in .env
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
