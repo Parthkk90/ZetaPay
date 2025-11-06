@@ -1,11 +1,13 @@
 {
-  "name": "next-template",
+  "name": "zetapay-extension",
   "private": true,
-  "version": "0.0.40",
+  "version": "0.2.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "build:extension": "node scripts/build-extension.js",
+    "generate:icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.1.3",

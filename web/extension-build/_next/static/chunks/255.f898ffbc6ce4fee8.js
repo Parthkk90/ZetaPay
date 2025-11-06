@@ -1,0 +1,18 @@
+"use strict";
+(self["webpackChunk_N_E"] = self["webpackChunk_N_E"] || []).push([[255],{
+
+/***/ 50255:
+/***/ (function(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ celo_default; }
+/* harmony export */ });
+/* __next_internal_client_entry_do_not_use__ default auto */ // src/components/RainbowKitProvider/chainIcons/celo.svg
+var celo_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none"><circle cx="14" cy="14" r="14" fill="%23FCFF52"/><path d="M21 7H7v14h14v-4.887h-2.325a5.126 5.126 0 0 1-4.664 3.023c-2.844 0-5.147-2.325-5.147-5.147-.003-2.822 2.303-5.125 5.147-5.125 2.102 0 3.904 1.28 4.704 3.104H21V7Z" fill="%23000"/></svg>';
+
+
+
+/***/ })
+
+}]);

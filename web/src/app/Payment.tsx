@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useContractWrite, useWaitForTransaction, useNetwork, useSwitchNetwork } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
 import { parseUnits } from "viem";
 import UniversalPaymentAbi from "../UniversalPayment.abi.json";
 
@@ -18,32 +18,27 @@ const TOKENS = [
 
 export const Payment = () => {
   const { address, isConnected } = useAccount();
-  const { chain } = useNetwork();
-  const { switchNetwork } = useSwitchNetwork();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [inputToken, setInputToken] = useState(TOKENS[0].address);
   const [targetToken, setTargetToken] = useState(TOKENS[0].address);
   const [status, setStatus] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
 
-  const { data: txData, isLoading: isTxPending } = useWaitForTransaction({
-    hash: txHash as `0x${string}` | undefined,
-    enabled: !!txHash,
+  const { data: txReceipt, isLoading: isTxPending } = useWaitForTransactionReceipt({
+    hash: txHash,
   });
 
-  const { writeAsync } = useContractWrite({
-    address: UNIVERSAL_PAYMENT_ADDRESS,
-    abi: UniversalPaymentAbi,
-    functionName: "processPayment",
-  });
+  const { writeContractAsync } = useWriteContract();
 
   const handleSend = useCallback(async () => {
     if (!isConnected) return setStatus("Please connect your wallet first.");
-    if (chain?.id !== ZETA_ATHENS_CHAIN_ID) {
-      if (switchNetwork) {
-        switchNetwork(ZETA_ATHENS_CHAIN_ID);
+    if (chainId !== ZETA_ATHENS_CHAIN_ID) {
+      if (switchChain) {
+        switchChain({ chainId: ZETA_ATHENS_CHAIN_ID });
       }
       return setStatus("Please switch to ZetaChain Athens testnet.");
     }
@@ -55,7 +50,10 @@ export const Payment = () => {
       const selectedToken = TOKENS.find(t => t.address === inputToken);
       const weiAmount = parseUnits(amount, selectedToken?.decimals || 18);
 
-      const tx = await writeAsync?.({
+      const hash = await writeContractAsync({
+        address: UNIVERSAL_PAYMENT_ADDRESS,
+        abi: UniversalPaymentAbi,
+        functionName: "processPayment",
         args: [
           inputToken as `0x${string}`,
           weiAmount,
@@ -64,13 +62,13 @@ export const Payment = () => {
         ],
       });
 
-      setTxHash(tx?.hash || null);
-      setStatus(`Transaction submitted: ${tx?.hash}`);
+      setTxHash(hash);
+      setStatus(`Transaction submitted: ${hash}`);
     } catch (err: any) {
       setStatus(`Failed: ${err?.message ?? String(err)}`);
-      setTxHash(null);
+      setTxHash(undefined);
     }
-  }, [isConnected, chain, switchNetwork, recipient, amount, inputToken, targetToken, writeAsync]);
+  }, [isConnected, chainId, switchChain, recipient, amount, inputToken, targetToken, writeContractAsync]);
 
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md dark:bg-zeta-grey-800">
@@ -79,7 +77,7 @@ export const Payment = () => {
         <ConnectButton />
       </div>
 
-      {chain && chain.id !== ZETA_ATHENS_CHAIN_ID && (
+      {chainId !== ZETA_ATHENS_CHAIN_ID && (
         <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-md text-sm text-yellow-800 dark:text-yellow-200">
           Please switch to ZetaChain Athens testnet
         </div>
@@ -151,7 +149,7 @@ export const Payment = () => {
 
       <button
         onClick={handleSend}
-        disabled={!isConnected || isTxPending || chain?.id !== ZETA_ATHENS_CHAIN_ID}
+        disabled={!isConnected || isTxPending || chainId !== ZETA_ATHENS_CHAIN_ID}
         className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-zeta-blue-700 dark:hover:bg-zeta-blue-800"
       >
         {isTxPending ? "Processing..." : "Send Payment"}
@@ -160,7 +158,7 @@ export const Payment = () => {
       {status && (
         <div className="pt-2 text-sm text-gray-700 dark:text-gray-300">
           {status}
-          {txData && <div className="mt-1 text-green-600 dark:text-green-400">✓ Confirmed</div>}
+          {txReceipt && <div className="mt-1 text-green-600 dark:text-green-400">✓ Confirmed</div>}
         </div>
       )}
     </div>
