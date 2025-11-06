@@ -49,6 +49,9 @@ export const Payment = () => {
       setStatus("Preparing transaction...");
       const selectedToken = TOKENS.find(t => t.address === inputToken);
       const weiAmount = parseUnits(amount, selectedToken?.decimals || 18);
+      
+      // Calculate minimum acceptable output with 0.5% slippage tolerance
+      const minAmountOut = (weiAmount * 995n) / 1000n; // 99.5% of input
 
       const hash = await writeContractAsync({
         address: UNIVERSAL_PAYMENT_ADDRESS,
@@ -59,6 +62,7 @@ export const Payment = () => {
           weiAmount,
           targetToken as `0x${string}`,
           recipient as `0x${string}`,
+          minAmountOut, // Pass minimum amount for slippage protection
         ],
       });
 
