@@ -1,0 +1,118 @@
+import express, { Application } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import { errorHandler } from './middleware/errorHandler';
+import { rateLimiter } from './middleware/rateLimiter';
+import logger from './utils/logger';
+import { connectDB } from './db/connection';
+
+// Routes
+import merchantRoutes from './routes/merchant.routes';
+import paymentRoutes from './routes/payment.routes';
+import webhookRoutes from './routes/webhook.routes';
+import healthRoutes from './routes/health.routes';
+import apiKeyRoutes from './routes/apiKey.routes';
+
+// Load environment variables
+dotenv.config();
+
+const app: Application = express();
+const PORT = process.env.PORT || 3001;
+const API_VERSION = process.env.API_VERSION || 'v1';
+
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  credentials: true,
+}));
+
+// Request parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined', {
+    stream: {
+      write: (message: string) => logger.info(message.trim()),
+    },
+  }));
+}
+
+// Rate limiting
+app.use(rateLimiter);
+
+// Health check (no rate limit)
+app.use('/health', healthRoutes);
+
+// API Routes
+app.use(`/api/${API_VERSION}/merchants`, merchantRoutes);
+app.use(`/api/${API_VERSION}/payments`, paymentRoutes);
+app.use(`/api/${API_VERSION}/webhooks`, webhookRoutes);
+app.use(`/api/${API_VERSION}/api-keys`, apiKeyRoutes);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'ZetaPay API',
+    version: API_VERSION,
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      merchants: `/api/${API_VERSION}/merchants`,
+      payments: `/api/${API_VERSION}/payments`,
+      webhooks: `/api/${API_VERSION}/webhooks`,
+      apiKeys: `/api/${API_VERSION}/api-keys`,
+    },
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found',
+    path: req.path,
+  });
+});
+
+// Error handler (must be last)
+app.use(errorHandler);
+
+// Start server
+const startServer = async () => {
+  try {
+    // Connect to database
+    await connectDB();
+    
+    app.listen(PORT, () => {
+      logger.info(`🚀 ZetaPay API Server running on port ${PORT}`);
+      logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
+      logger.info(`🔗 Base URL: http://localhost:${PORT}`);
+      logger.info(`📚 API Version: ${API_VERSION}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully...');
+  process.exit(0);
+});
+
+startServer();
+
+export default app;
