@@ -1,0 +1,95 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    name: Validate Pull Request
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check PR title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $PR_TITLE"
+          
+          # Check if title follows convention
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore|ci):.*$ ]]; then
+            echo "⚠️ PR title should follow convention: type: description"
+            echo "Examples: feat: add payment routing, fix: slippage calculation"
+          fi
+      
+      - name: Check branch name
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          echo "Branch: $BRANCH"
+          
+          if [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "master" ]]; then
+            echo "❌ Cannot create PR from main/master branch"
+            exit 1
+          fi
+      
+      - name: Check for breaking changes
+        run: |
+          echo "Checking for breaking changes in contracts..."
+          
+          # Check if UniversalPayment.sol was modified
+          if git diff --name-only origin/main...HEAD | grep -q "contracts/contracts/UniversalPayment.sol"; then
+            echo "⚠️ UniversalPayment.sol was modified"
+            echo "Please ensure:"
+            echo "1. All tests pass"
+            echo "2. No breaking changes to deployed contract"
+            echo "3. Update version if needed"
+          fi
+      
+      - name: Size check
+        run: |
+          FILES_CHANGED=$(git diff --name-only origin/main...HEAD | wc -l)
+          echo "Files changed: $FILES_CHANGED"
+          
+          if [ $FILES_CHANGED -gt 50 ]; then
+            echo "⚠️ Large PR detected ($FILES_CHANGED files)"
+            echo "Consider splitting into smaller PRs"
+          fi
+      
+      - name: PR Summary
+        run: |
+          echo "## PR Validation ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changed Files:**" >> $GITHUB_STEP_SUMMARY
+          git diff --name-only origin/main...HEAD >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commits:**" >> $GITHUB_STEP_SUMMARY
+          git log --oneline origin/main...HEAD >> $GITHUB_STEP_SUMMARY
+  
+  test-coverage:
+    name: Check Test Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Check if tests were added
+        run: |
+          # Check if new test files were added or modified
+          if git diff --name-only origin/main...HEAD | grep -q "test.*\.ts$"; then
+            echo "✅ Tests were added or modified"
+          else
+            # Check if contract files were modified
+            if git diff --name-only origin/main...HEAD | grep -q "contracts/contracts.*\.sol$"; then
+              echo "⚠️ Contract files modified but no test changes detected"
+              echo "Please ensure tests are updated"
+            fi
+          fi

@@ -1,0 +1,77 @@
+name: Deploy to Testnet
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      network:
+        description: 'Network to deploy to'
+        required: true
+        default: 'zeta_testnet'
+        type: choice
+        options:
+          - zeta_testnet
+          - localhost
+      confirm:
+        description: 'Type "deploy" to confirm'
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy Contracts
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'deploy'
+    
+    defaults:
+      run:
+        working-directory: ./contracts
+    
+    environment:
+      name: testnet
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: contracts/yarn.lock
+      
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      
+      - name: Compile contracts
+        run: yarn hardhat compile
+      
+      - name: Run tests before deployment
+        run: yarn hardhat test
+      
+      - name: Deploy to testnet
+        run: yarn hardhat run scripts/deploy.ts --network ${{ github.event.inputs.network }}
+        env:
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+      
+      - name: Verify deployment
+        run: |
+          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Network:** ${{ github.event.inputs.network }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Please verify the contract on block explorer" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Create deployment artifact
+        run: |
+          mkdir -p deployment-info
+          echo "Network: ${{ github.event.inputs.network }}" > deployment-info/deployment.txt
+          echo "Timestamp: $(date)" >> deployment-info/deployment.txt
+          echo "Commit: ${{ github.sha }}" >> deployment-info/deployment.txt
+      
+      - name: Upload deployment info
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-info
+          path: contracts/deployment-info/
+          retention-days: 90

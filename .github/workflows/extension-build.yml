@@ -1,0 +1,97 @@
+name: Extension Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'web/**'
+      - '.github/workflows/extension-build.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'web/**'
+
+jobs:
+  build:
+    name: Build Extension
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+      
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      
+      - name: Build Next.js app
+        run: yarn build
+        env:
+          NEXT_PUBLIC_UNIVERSAL_PAYMENT_ADDRESS: ${{ secrets.NEXT_PUBLIC_UNIVERSAL_PAYMENT_ADDRESS || '0x7a9cEdD3df8694Ef06B81A1E22Fb324353E35B01' }}
+      
+      - name: Build extension package
+        run: yarn build:extension
+      
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zetapay-extension
+          path: web/extension-build/
+          retention-days: 30
+      
+      - name: Upload extension zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: zetapay-extension-zip
+          path: web/zetapay-extension-*.zip
+          retention-days: 30
+      
+      - name: Generate build report
+        run: |
+          echo "## Extension Build Success ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Extension packaged and ready for distribution!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Info:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Platform: Chrome/Firefox" >> $GITHUB_STEP_SUMMARY
+          echo "- Manifest: v3" >> $GITHUB_STEP_SUMMARY
+          echo "- Framework: Next.js 14" >> $GITHUB_STEP_SUMMARY
+  
+  lint:
+    name: Lint Extension Code
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+      
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      
+      - name: TypeScript check
+        run: yarn tsc --noEmit
+      
+      - name: Lint check (if configured)
+        if: false # Enable if you add eslint
+        run: yarn lint
