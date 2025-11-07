@@ -14,6 +14,8 @@ import paymentRoutes from './routes/payment.routes';
 import webhookRoutes from './routes/webhook.routes';
 import healthRoutes from './routes/health.routes';
 import apiKeyRoutes from './routes/apiKey.routes';
+import kycRoutes from './routes/kyc.routes';
+import complianceRoutes from './routes/compliance.routes';
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +57,8 @@ app.use(`/api/${API_VERSION}/merchants`, merchantRoutes);
 app.use(`/api/${API_VERSION}/payments`, paymentRoutes);
 app.use(`/api/${API_VERSION}/webhooks`, webhookRoutes);
 app.use(`/api/${API_VERSION}/api-keys`, apiKeyRoutes);
+app.use(`/api/${API_VERSION}/kyc`, kycRoutes);
+app.use(`/api/${API_VERSION}/compliance`, complianceRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -68,6 +72,8 @@ app.get('/', (req, res) => {
       payments: `/api/${API_VERSION}/payments`,
       webhooks: `/api/${API_VERSION}/webhooks`,
       apiKeys: `/api/${API_VERSION}/api-keys`,
+      kyc: `/api/${API_VERSION}/kyc`,
+      compliance: `/api/${API_VERSION}/compliance`,
     },
   });
 });

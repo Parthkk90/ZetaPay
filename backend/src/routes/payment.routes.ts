@@ -8,6 +8,7 @@ import { generatePaymentReference } from '../utils/crypto';
 import { getCryptoPrice, convertFiatToCrypto } from '../services/priceService';
 import * as stripeService from '../services/stripe';
 import * as paypalService from '../services/paypal';
+import * as amlService from '../services/aml';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -123,6 +124,14 @@ router.post(
       }
 
       await paymentRepo.save(payment);
+
+      // Run AML monitoring on the payment
+      try {
+        await amlService.monitorPayment(payment.id);
+      } catch (amlError) {
+        // Log but don't fail the payment if AML check fails
+        logger.error(`AML monitoring failed for payment ${payment.id}:`, amlError);
+      }
 
       logger.info(`Payment created: ${payment.id} (${payment.source})`);
 
