@@ -16,6 +16,7 @@ import healthRoutes from './routes/health.routes';
 import apiKeyRoutes from './routes/apiKey.routes';
 import kycRoutes from './routes/kyc.routes';
 import complianceRoutes from './routes/compliance.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 // Load environment variables
 dotenv.config();
@@ -59,6 +60,7 @@ app.use(`/api/${API_VERSION}/webhooks`, webhookRoutes);
 app.use(`/api/${API_VERSION}/api-keys`, apiKeyRoutes);
 app.use(`/api/${API_VERSION}/kyc`, kycRoutes);
 app.use(`/api/${API_VERSION}/compliance`, complianceRoutes);
+app.use(`/api/${API_VERSION}/analytics`, analyticsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
