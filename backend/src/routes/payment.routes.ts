@@ -24,6 +24,7 @@ router.post(
     body('amount').isNumeric().isFloat({ min: 0.01 }),
     body('currency').isString().isLength({ min: 3, max: 4 }),
     body('source').isIn(['crypto', 'stripe', 'paypal']),
+    body('token').optional().isString(),
     body('orderId').optional().isString(),
     body('description').optional().isString(),
     body('customerEmail').optional().isEmail(),
@@ -104,16 +105,23 @@ router.post(
           approvalUrl: order.links.find((link: any) => link.rel === 'approve')?.href,
         };
       } else if (source === 'crypto') {
-        // Crypto payment - convert fiat to crypto
-        const cryptoCurrency = merchant.paymentSettings?.acceptedTokens?.[0] || 'ZETA';
+        // Crypto payment - determine token to use
+        const requestedToken = (req.body.token as string) || merchant.paymentSettings?.acceptedTokens?.[0] || 'ZETA';
+
+        // Validate merchant accepts this token
+        const acceptedTokens: string[] = merchant.paymentSettings?.acceptedTokens || [];
+        if (acceptedTokens.length > 0 && !acceptedTokens.includes(requestedToken)) {
+          throw new AppError('Requested token not accepted by merchant', 400);
+        }
+
         const conversion = await convertFiatToCrypto(
           parseFloat(amount),
           currency,
-          cryptoCurrency
+          requestedToken
         );
 
         payment.amountCrypto = conversion.cryptoAmount.toFixed(8);
-        payment.cryptoCurrency = cryptoCurrency;
+        payment.cryptoCurrency = requestedToken;
         payment.amountFiat = amount;
         payment.fiatCurrency = currency.toUpperCase();
         payment.exchangeRate = conversion.exchangeRate.toFixed(8);
