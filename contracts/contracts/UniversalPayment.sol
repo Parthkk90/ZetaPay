@@ -27,6 +27,9 @@ contract UniversalPayment is Ownable, ReentrancyGuard, Pausable {
     
     // Minimum slippage tolerance (basis points)
     uint256 public minSlippageBps = 50; // 0.5% default
+
+    // Token whitelist mapping - whether a token is accepted by the contract
+    mapping(address => bool) public acceptedTokens;
     
     // Events
     event PaymentProcessed(
@@ -82,6 +85,8 @@ contract UniversalPayment is Ownable, ReentrancyGuard, Pausable {
     ) external nonReentrant whenNotPaused {
         if (amount == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
+        // Require target token to be accepted by this contract
+        if (!acceptedTokens[targetToken]) revert InvalidRecipient();
         
         // Transfer tokens from sender to this contract
         if (!IZRC20(inputToken).transferFrom(msg.sender, address(this), amount)) {
@@ -153,6 +158,29 @@ contract UniversalPayment is Ownable, ReentrancyGuard, Pausable {
         minSlippageBps = newSlippageBps;
         
         emit SlippageUpdated(oldSlippage, newSlippageBps);
+    }
+
+    /**
+     * @notice Set acceptance for a single token
+     * @param token Token address
+     * @param accepted Whether to accept the token
+     */
+    function setAcceptedToken(address token, bool accepted) external onlyOwner {
+        require(token != address(0), "Invalid token");
+        acceptedTokens[token] = accepted;
+    }
+
+    /**
+     * @notice Batch update accepted tokens
+     * @param tokens Array of token addresses
+     * @param accepted Whether to accept (true) or reject (false)
+     */
+    function setAcceptedTokens(address[] calldata tokens, bool accepted) external onlyOwner {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] != address(0)) {
+                acceptedTokens[tokens[i]] = accepted;
+            }
+        }
     }
     
     /**
