@@ -1,8 +1,7 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { query, validationResult } from 'express-validator';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import * as analyticsService from '../services/analytics';
-import logger from '../utils/logger';
 
 const router = Router();
 
@@ -40,7 +39,7 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('period').optional().isIn(['7d', '30d', '90d']),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -78,7 +77,7 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('period').optional().isIn(['7d', '30d', '90d']),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -116,7 +115,7 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('period').optional().isIn(['7d', '30d', '90d']),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -154,7 +153,7 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('period').optional().isIn(['7d', '30d', '90d']),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -193,7 +192,7 @@ router.get(
     query('period').optional().isIn(['7d', '30d', '90d']),
     query('limit').optional().isInt({ min: 1, max: 100 }),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -233,7 +232,7 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('period').optional().isIn(['7d', '30d', '90d']),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -271,7 +270,7 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('period').optional().isIn(['7d', '30d', '90d']),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {

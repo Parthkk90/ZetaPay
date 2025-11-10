@@ -1,8 +1,8 @@
 import { AppDataSource } from '../db/connection';
 import { Payment, PaymentStatus } from '../models/Payment';
 import { Merchant } from '../models/Merchant';
-import { TransactionAlert } from '../models/TransactionAlert';
-import { Between, MoreThan } from 'typeorm';
+import { TransactionAlert, AlertStatus } from '../models/TransactionAlert';
+import { Between } from 'typeorm';
 import logger from '../utils/logger';
 
 export interface AnalyticsOverview {
@@ -86,7 +86,7 @@ export async function getAnalyticsOverview(
 
     const totalVolume = payments
       .filter(p => p.status === PaymentStatus.COMPLETED)
-      .reduce((sum, p) => sum + parseFloat(p.usdAmount), 0);
+      .reduce((sum, p) => sum + parseFloat(p.amountFiat || '0'), 0);
 
     const successRate = totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0;
     const averagePaymentValue = successfulPayments > 0 ? (totalVolume / successfulPayments).toFixed(2) : '0.00';
@@ -95,7 +95,7 @@ export async function getAnalyticsOverview(
     const activeAlerts = await alertRepo.count({
       where: {
         merchantId,
-        status: 'open',
+        status: AlertStatus.OPEN,
       },
     });
 
@@ -158,7 +158,7 @@ export async function getPaymentTrends(
 
       if (payment.status === PaymentStatus.COMPLETED) {
         trend.successCount++;
-        trend.volume = (parseFloat(trend.volume) + parseFloat(payment.usdAmount)).toFixed(2);
+        trend.volume = (parseFloat(trend.volume) + parseFloat(payment.amountFiat || '0')).toFixed(2);
       } else if (payment.status === PaymentStatus.FAILED || payment.status === PaymentStatus.EXPIRED) {
         trend.failedCount++;
       }
@@ -195,15 +195,15 @@ export async function getTokenBreakdown(
     let totalVolume = 0;
 
     payments.forEach((payment) => {
-      const token = payment.token;
+      const token = payment.cryptoCurrency;
       if (!tokenMap.has(token)) {
         tokenMap.set(token, { count: 0, volume: 0 });
       }
 
       const data = tokenMap.get(token)!;
       data.count++;
-      data.volume += parseFloat(payment.usdAmount);
-      totalVolume += parseFloat(payment.usdAmount);
+      data.volume += parseFloat(payment.amountFiat || '0');
+      totalVolume += parseFloat(payment.amountFiat || '0');
     });
 
     // Convert to array with percentages
@@ -240,7 +240,7 @@ export async function getRevenueMetrics(
       order: { createdAt: 'ASC' },
     });
 
-    const totalRevenue = payments.reduce((sum, p) => sum + parseFloat(p.usdAmount), 0);
+    const totalRevenue = payments.reduce((sum, p) => sum + parseFloat(p.amountFiat || '0'), 0);
 
     // Revenue by token
     const revenueByToken = await getTokenBreakdown(merchantId, startDate, endDate);
@@ -251,7 +251,7 @@ export async function getRevenueMetrics(
     payments.forEach((payment) => {
       const date = payment.createdAt.toISOString().split('T')[0];
       const current = revenueByDayMap.get(date) || 0;
-      revenueByDayMap.set(date, current + parseFloat(payment.usdAmount));
+      revenueByDayMap.set(date, current + parseFloat(payment.amountFiat || '0'));
     });
 
     const revenueByDay = Array.from(revenueByDayMap.entries()).map(([date, revenue]) => ({
@@ -272,7 +272,7 @@ export async function getRevenueMetrics(
       },
     });
 
-    const previousRevenue = previousPayments.reduce((sum, p) => sum + parseFloat(p.usdAmount), 0);
+    const previousRevenue = previousPayments.reduce((sum, p) => sum + parseFloat(p.amountFiat || '0'), 0);
     const revenueGrowth = previousRevenue > 0
       ? parseFloat((((totalRevenue - previousRevenue) / previousRevenue) * 100).toFixed(2))
       : 0;
@@ -314,13 +314,13 @@ export async function getTopCustomers(
     const customerMap = new Map<string, { totalSpent: number; count: number; lastPayment: Date }>();
 
     payments.forEach((payment) => {
-      const wallet = payment.customerWallet;
+      const wallet = payment.fromAddress || 'unknown';
       if (!customerMap.has(wallet)) {
         customerMap.set(wallet, { totalSpent: 0, count: 0, lastPayment: payment.createdAt });
       }
 
       const data = customerMap.get(wallet)!;
-      data.totalSpent += parseFloat(payment.usdAmount);
+      data.totalSpent += parseFloat(payment.amountFiat || '0');
       data.count++;
 
       if (payment.createdAt > data.lastPayment) {
@@ -426,8 +426,8 @@ export async function getAlertStatistics(
     // Group by type
     const typeMap = new Map<string, number>();
     alerts.forEach((alert) => {
-      const count = typeMap.get(alert.alertType) || 0;
-      typeMap.set(alert.alertType, count + 1);
+      const count = typeMap.get(alert.type) || 0;
+      typeMap.set(alert.type, count + 1);
     });
 
     const byType = Array.from(typeMap.entries()).map(([type, count]) => ({

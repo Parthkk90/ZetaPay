@@ -238,7 +238,7 @@ export async function sendTransactionAlert(
 ): Promise<void> {
   const { merchantName, alertType, severity, description, paymentId, amount } = alert;
 
-  const severityColor = {
+  const severityColor: Record<string, string> = {
     low: '#10b981',
     medium: '#f59e0b',
     high: '#ef4444',
@@ -282,7 +282,7 @@ export async function sendTransactionAlert(
             
             <div class="detail-row">
               <span class="label">Severity:</span>
-              <span class="value" style="color: ${severityColor[severity.toLowerCase()]}; font-weight: bold;">${severity.toUpperCase()}</span>
+              <span class="value" style="color: ${severityColor[severity.toLowerCase()] || '#ef4444'}; font-weight: bold;">${severity.toUpperCase()}</span>
             </div>
             
             <div class="detail-row">
