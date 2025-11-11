@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -7,6 +8,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimiter';
 import logger from './utils/logger';
 import { connectDB } from './db/connection';
+import { initializeWebSocket } from './services/websocket';
 
 // Routes
 import merchantRoutes from './routes/merchant.routes';
@@ -17,11 +19,13 @@ import apiKeyRoutes from './routes/apiKey.routes';
 import kycRoutes from './routes/kyc.routes';
 import complianceRoutes from './routes/compliance.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import monitoringRoutes from './routes/monitoring.routes';
 
 // Load environment variables
 dotenv.config();
 
 const app: Application = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 3001;
 const API_VERSION = process.env.API_VERSION || 'v1';
 
@@ -61,9 +65,10 @@ app.use(`/api/${API_VERSION}/api-keys`, apiKeyRoutes);
 app.use(`/api/${API_VERSION}/kyc`, kycRoutes);
 app.use(`/api/${API_VERSION}/compliance`, complianceRoutes);
 app.use(`/api/${API_VERSION}/analytics`, analyticsRoutes);
+app.use(`/api/${API_VERSION}/monitoring`, monitoringRoutes);
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     name: 'ZetaPay API',
     version: API_VERSION,
@@ -76,6 +81,8 @@ app.get('/', (req, res) => {
       apiKeys: `/api/${API_VERSION}/api-keys`,
       kyc: `/api/${API_VERSION}/kyc`,
       compliance: `/api/${API_VERSION}/compliance`,
+      analytics: `/api/${API_VERSION}/analytics`,
+      monitoring: `/api/${API_VERSION}/monitoring`,
     },
   });
 });
@@ -98,11 +105,16 @@ const startServer = async () => {
     // Connect to database
     await connectDB();
     
-    app.listen(PORT, () => {
+    // Initialize WebSocket
+    initializeWebSocket(server);
+    logger.info('✅ WebSocket service initialized');
+    
+    server.listen(PORT, () => {
       logger.info(`🚀 ZetaPay API Server running on port ${PORT}`);
       logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🔗 Base URL: http://localhost:${PORT}`);
       logger.info(`📚 API Version: ${API_VERSION}`);
+      logger.info(`🔌 WebSocket: ws://localhost:${PORT}`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -111,13 +123,17 @@ const startServer = async () => {
 };
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully...');
+  const { getWebSocketService } = await import('./services/websocket');
+  await getWebSocketService().disconnectAll();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully...');
+  const { getWebSocketService } = await import('./services/websocket');
+  await getWebSocketService().disconnectAll();
   process.exit(0);
 });
 

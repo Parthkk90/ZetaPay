@@ -126,3 +126,37 @@ export const authenticate = async (
     next(new AppError('Authentication required', 401));
   }
 };
+
+// Socket Authentication (for WebSocket connections)
+export const authenticateSocket = async (apiKey: string): Promise<string | null> => {
+  try {
+    if (!apiKey || !apiKey.startsWith('zpk_')) {
+      return null;
+    }
+
+    const apiKeyRepo = AppDataSource.getRepository(ApiKey);
+    const keys = await apiKeyRepo.find({
+      relations: ['merchant'],
+    });
+
+    for (const key of keys) {
+      const isValid = await bcrypt.compare(apiKey, key.key);
+      if (isValid) {
+        if (key.status !== 'active') return null;
+        if (key.expiresAt && key.expiresAt < new Date()) return null;
+        if (key.merchant.status !== 'active') return null;
+
+        // Update usage stats
+        key.lastUsedAt = new Date();
+        key.usageCount += 1;
+        await apiKeyRepo.save(key);
+
+        return key.merchant.id;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
