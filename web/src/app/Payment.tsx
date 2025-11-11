@@ -1,20 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
 import { parseUnits } from "viem";
 import UniversalPaymentAbi from "../UniversalPayment.abi.json";
+import { SUPPORTED_TOKENS, getTokenByAddress, formatTokenAmount } from "../config/tokens";
 
 const UNIVERSAL_PAYMENT_ADDRESS = (process.env.NEXT_PUBLIC_UNIVERSAL_PAYMENT_ADDRESS || "0x7a9cEdD3df8694Ef06B81A1E22Fb324353E35B01") as `0x${string}`;
 const ZETA_ATHENS_CHAIN_ID = 7001;
-
-// Token addresses on ZetaChain Athens testnet (examples - replace with actual ZRC20 addresses)
-const TOKENS = [
-  { symbol: "ZETA", address: "0x0000000000000000000000000000000000000000", decimals: 18 },
-  { symbol: "ETH.ETH", address: "0x5F0b1a82749cb4E2278EC87F8BF6B618dC71a8bf", decimals: 18 },
-  { symbol: "BTC.BTC", address: "0x13A0c5930C028511Dc02665E7285134B6d11A5f4", decimals: 8 },
-];
 
 export const Payment = () => {
   const { address, isConnected } = useAccount();
@@ -23,8 +17,8 @@ export const Payment = () => {
   
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
-  const [inputToken, setInputToken] = useState(TOKENS[0].address);
-  const [targetToken, setTargetToken] = useState(TOKENS[0].address);
+  const [inputToken, setInputToken] = useState(SUPPORTED_TOKENS[0].address);
+  const [targetToken, setTargetToken] = useState(SUPPORTED_TOKENS[0].address);
   const [status, setStatus] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
 
@@ -33,6 +27,17 @@ export const Payment = () => {
   });
 
   const { writeContractAsync } = useWriteContract();
+
+  // Get selected token details
+  const selectedInputToken = useMemo(
+    () => getTokenByAddress(inputToken) || SUPPORTED_TOKENS[0],
+    [inputToken]
+  );
+
+  const selectedTargetToken = useMemo(
+    () => getTokenByAddress(targetToken) || SUPPORTED_TOKENS[0],
+    [targetToken]
+  );
 
   const handleSend = useCallback(async () => {
     if (!isConnected) return setStatus("Please connect your wallet first.");
@@ -47,8 +52,7 @@ export const Payment = () => {
 
     try {
       setStatus("Preparing transaction...");
-      const selectedToken = TOKENS.find(t => t.address === inputToken);
-      const weiAmount = parseUnits(amount, selectedToken?.decimals || 18);
+      const weiAmount = parseUnits(amount, selectedInputToken.decimals);
       
       // Calculate minimum acceptable output with 0.5% slippage tolerance
       const minAmountOut = (weiAmount * 995n) / 1000n; // 99.5% of input
@@ -72,7 +76,7 @@ export const Payment = () => {
       setStatus(`Failed: ${err?.message ?? String(err)}`);
       setTxHash(undefined);
     }
-  }, [isConnected, chainId, switchChain, recipient, amount, inputToken, targetToken, writeContractAsync]);
+  }, [isConnected, chainId, switchChain, recipient, amount, inputToken, targetToken, selectedInputToken, writeContractAsync]);
 
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md dark:bg-zeta-grey-800">
@@ -89,7 +93,7 @@ export const Payment = () => {
 
       <div>
         <label htmlFor="inputToken" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Input Token
+          Pay With
         </label>
         <select
           name="inputToken"
@@ -98,15 +102,17 @@ export const Payment = () => {
           onChange={(e) => setInputToken(e.target.value)}
           className="block w-full px-3 py-2 mt-1 text-gray-900 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-zeta-grey-700 dark:border-zeta-grey-600 dark:text-white"
         >
-          {TOKENS.map(token => (
-            <option key={token.address} value={token.address}>{token.symbol}</option>
+          {SUPPORTED_TOKENS.map(token => (
+            <option key={token.address} value={token.address}>
+              {token.symbol} {token.isStablecoin ? '💵' : ''} - {token.name}
+            </option>
           ))}
         </select>
       </div>
 
       <div>
         <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Amount
+          Amount ({selectedInputToken.symbol})
         </label>
         <input
           type="text"
@@ -121,7 +127,7 @@ export const Payment = () => {
 
       <div>
         <label htmlFor="targetToken" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Target Token
+          Convert To (Optional)
         </label>
         <select
           name="targetToken"
@@ -130,10 +136,17 @@ export const Payment = () => {
           onChange={(e) => setTargetToken(e.target.value)}
           className="block w-full px-3 py-2 mt-1 text-gray-900 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-zeta-grey-700 dark:border-zeta-grey-600 dark:text-white"
         >
-          {TOKENS.map(token => (
-            <option key={token.address} value={token.address}>{token.symbol}</option>
+          {SUPPORTED_TOKENS.map(token => (
+            <option key={token.address} value={token.address}>
+              {token.symbol} {token.isStablecoin ? '💵' : ''} - {token.name}
+            </option>
           ))}
         </select>
+        {inputToken !== targetToken && (
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Swapping via Uniswap (0.5% slippage tolerance)
+          </p>
+        )}
       </div>
 
       <div>
