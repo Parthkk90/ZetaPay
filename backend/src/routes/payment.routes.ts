@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { AppDataSource } from '../db/connection';
 import { Payment, PaymentStatus, PaymentSource } from '../models/Payment';
@@ -9,6 +9,7 @@ import { getCryptoPrice, convertFiatToCrypto } from '../services/priceService';
 import * as stripeService from '../services/stripe';
 import * as paypalService from '../services/paypal';
 import * as amlService from '../services/aml';
+import { getWebSocketService } from '../services/websocket';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -30,7 +31,7 @@ router.post(
     body('customerEmail').optional().isEmail(),
     body('returnUrl').optional().isURL(),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -133,6 +134,15 @@ router.post(
 
       await paymentRepo.save(payment);
 
+      // Emit WebSocket event for payment creation
+      try {
+        const wsService = getWebSocketService();
+        wsService.emitPaymentCreated(payment);
+      } catch (wsError) {
+        logger.error('Failed to emit WebSocket event:', wsError);
+        // Don't fail the payment if WebSocket fails
+      }
+
       // Run AML monitoring on the payment
       try {
         await amlService.monitorPayment(payment.id);
@@ -177,7 +187,7 @@ router.get(
   '/:id',
   authenticate,
   [param('id').isUUID()],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -212,7 +222,7 @@ router.get(
  * GET /api/v1/payments
  * List merchant payments
  */
-router.get('/', authenticate, async (req: AuthRequest, res, next) => {
+router.get('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const merchant = req.merchant!;
     const { status, source, limit = 50, offset = 0 } = req.query;
@@ -254,7 +264,7 @@ router.post(
   '/:id/confirm',
   authenticateApiKey,
   [param('id').isUUID()],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -281,6 +291,14 @@ router.post(
 
       payment.status = PaymentStatus.PROCESSING;
 
+      // Emit WebSocket event for payment update
+      try {
+        const wsService = getWebSocketService();
+        wsService.emitPaymentUpdated(payment);
+      } catch (wsError) {
+        logger.error('Failed to emit WebSocket event:', wsError);
+      }
+
       if (payment.source === PaymentSource.STRIPE && payment.processorPaymentId) {
         const paymentIntent = await stripeService.confirmPaymentIntent(
           payment.processorPaymentId
@@ -297,6 +315,14 @@ router.post(
           ...payment.processorMetadata,
           captureId: order.purchase_units[0].payments.captures[0].id,
         };
+
+        // Emit WebSocket event for payment completion
+        try {
+          const wsService = getWebSocketService();
+          wsService.emitPaymentCompleted(payment);
+        } catch (wsError) {
+          logger.error('Failed to emit WebSocket event:', wsError);
+        }
       }
 
       await paymentRepo.save(payment);
@@ -322,7 +348,7 @@ router.post(
     param('id').isUUID(),
     body('amount').optional().isNumeric(),
   ],
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -366,6 +392,14 @@ router.post(
 
       payment.status = PaymentStatus.REFUNDED;
       await paymentRepo.save(payment);
+
+      // Emit WebSocket event for payment refund
+      try {
+        const wsService = getWebSocketService();
+        wsService.emitPaymentUpdated(payment);
+      } catch (wsError) {
+        logger.error('Failed to emit WebSocket event:', wsError);
+      }
 
       logger.info(`Payment refunded: ${payment.id}`);
 
