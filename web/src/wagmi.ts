@@ -2,7 +2,7 @@ import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { bscTestnet, sepolia, zetachainAthensTestnet } from "wagmi/chains";
 
 export const config = getDefaultConfig({
-  appName: "RainbowKit demo",
-  projectId: "9dd3b957e87a350c83ab1b87a7fcf40c",
+  appName: "ZetaPay",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "002a4547b312e2882994fdd76c272b8f",
   chains: [sepolia, bscTestnet, zetachainAthensTestnet],
 });
