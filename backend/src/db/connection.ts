@@ -20,6 +20,13 @@ export const AppDataSource = new DataSource({
   migrations: ['src/db/migrations/*.ts'],
   subscribers: [],
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Connection pooling for scalability
+  extra: {
+    max: parseInt(process.env.DB_POOL_MAX || '10'), // Maximum connections
+    min: parseInt(process.env.DB_POOL_MIN || '2'), // Minimum connections
+    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'), // 30s
+    connectionTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT || '2000'), // 2s
+  },
 });
 
 export const connectDB = async (): Promise<void> => {
