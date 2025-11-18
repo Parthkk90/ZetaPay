@@ -20,6 +20,8 @@ import kycRoutes from './routes/kyc.routes';
 import complianceRoutes from './routes/compliance.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import monitoringRoutes from './routes/monitoring.routes';
+import liquidityRoutes from './routes/liquidity.routes';
+import privacyRoutes from './routes/privacy.routes';
 
 // Load environment variables
 dotenv.config();
@@ -66,6 +68,8 @@ app.use(`/api/${API_VERSION}/kyc`, kycRoutes);
 app.use(`/api/${API_VERSION}/compliance`, complianceRoutes);
 app.use(`/api/${API_VERSION}/analytics`, analyticsRoutes);
 app.use(`/api/${API_VERSION}/monitoring`, monitoringRoutes);
+app.use(`/api/${API_VERSION}/liquidity`, liquidityRoutes);
+app.use(`/api/${API_VERSION}/privacy`, privacyRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {
