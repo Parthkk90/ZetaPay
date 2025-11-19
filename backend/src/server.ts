@@ -22,6 +22,8 @@ import analyticsRoutes from './routes/analytics.routes';
 import monitoringRoutes from './routes/monitoring.routes';
 import liquidityRoutes from './routes/liquidity.routes';
 import privacyRoutes from './routes/privacy.routes';
+import subscriptionRoutes from './routes/subscription.routes';
+import invoiceRoutes from './routes/invoice.routes';
 
 // Load environment variables
 dotenv.config();
@@ -70,6 +72,8 @@ app.use(`/api/${API_VERSION}/analytics`, analyticsRoutes);
 app.use(`/api/${API_VERSION}/monitoring`, monitoringRoutes);
 app.use(`/api/${API_VERSION}/liquidity`, liquidityRoutes);
 app.use(`/api/${API_VERSION}/privacy`, privacyRoutes);
+app.use(`/api/${API_VERSION}/subscriptions`, subscriptionRoutes);
+app.use(`/api/${API_VERSION}/invoices`, invoiceRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {
@@ -87,6 +91,8 @@ app.get('/', (_req, res) => {
       compliance: `/api/${API_VERSION}/compliance`,
       analytics: `/api/${API_VERSION}/analytics`,
       monitoring: `/api/${API_VERSION}/monitoring`,
+      subscriptions: `/api/${API_VERSION}/subscriptions`,
+      invoices: `/api/${API_VERSION}/invoices`,
     },
   });
 });
