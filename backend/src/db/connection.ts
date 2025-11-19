@@ -6,6 +6,8 @@ import { ApiKey } from '../models/ApiKey';
 import { Webhook } from '../models/Webhook';
 import { KYCVerification } from '../models/KYCVerification';
 import { TransactionAlert } from '../models/TransactionAlert';
+import { Subscription } from '../models/Subscription';
+import { Invoice } from '../models/Invoice';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -16,7 +18,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'zetapay',
   synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev only
   logging: process.env.NODE_ENV === 'development',
-  entities: [Merchant, Payment, ApiKey, Webhook, KYCVerification, TransactionAlert],
+  entities: [Merchant, Payment, ApiKey, Webhook, KYCVerification, TransactionAlert, Subscription, Invoice],
   migrations: ['src/db/migrations/*.ts'],
   subscribers: [],
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,

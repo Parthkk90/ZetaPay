@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Merchant } from './Merchant';
+import { Invoice } from './Invoice';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -30,6 +31,13 @@ export class Payment {
   @ManyToOne(() => Merchant, (merchant) => merchant.payments)
   @JoinColumn({ name: 'merchantId' })
   merchant!: Merchant;
+
+  @ManyToOne(() => Invoice, (invoice) => invoice.payments, { nullable: true })
+  @JoinColumn({ name: 'invoiceId' })
+  invoice?: Invoice;
+
+  @Column({ nullable: true })
+  invoiceId?: string;
 
   @Column({ type: 'enum', enum: PaymentSource })
   source!: PaymentSource;
