@@ -4,6 +4,12 @@
 let currentState = 'notConnected';
 let pendingPayment = null;
 let priceTicker = null;
+let contractInterface = null;
+
+// Load contract configuration
+if (typeof CONTRACT_CONFIG !== 'undefined') {
+  contractInterface = CONTRACT_CONFIG;
+}
 
 // ============================================
 // INITIALIZATION
@@ -168,26 +174,104 @@ async function confirmPayment() {
     
     // Calculate amount in wei (placeholder - should use real conversion)
     const amountInEth = parseFloat(orderDetails.amount) / 2000; // Mock conversion
-    const amountInWei = (amountInEth * 1e18).toString();
+    const amountInWei = BigInt(Math.floor(amountInEth * 1e18)).toString();
     
-    // For now, send a simple transaction
-    // In production, this should call the UniversalPayment contract
-    const recipientAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb'; // Mock merchant address
+    // Get merchant address (in production, this comes from merchant registration)
+    const recipientAddress = orderDetails.recipientAddress || '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb';
     
     document.getElementById('loadingText').textContent = 'Confirm in wallet...';
     document.getElementById('loadingSubtext').textContent = 'Please approve the transaction in MetaMask';
     
-    const txHash = await walletManager.sendTransaction(
-      recipientAddress,
-      amountInWei,
-      '0x'
-    );
+    let txHash;
     
-    document.getElementById('loadingText').textContent = 'Transaction sent...';
-    document.getElementById('loadingSubtext').textContent = 'Waiting for confirmation';
+    // Check if we should use the UniversalPayment contract
+    if (contractInterface && window.ethereum) {
+      try {
+        // Ensure we're on ZetaChain network
+        const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (currentChainId !== contractInterface.network.chainId) {
+          // Switch to ZetaChain
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: contractInterface.network.chainId }],
+            });
+          } catch (switchError) {
+            // If network doesn't exist, add it
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: contractInterface.network.chainId,
+                  chainName: contractInterface.network.chainName,
+                  rpcUrls: [contractInterface.network.rpcUrl],
+                  blockExplorerUrls: [contractInterface.network.blockExplorer]
+                }],
+              });
+            } else {
+              throw switchError;
+            }
+          }
+        }
+        
+        // Create contract instance using ethers.js (if available)
+        if (typeof ethers !== 'undefined') {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            contractInterface.address,
+            contractInterface.abi,
+            signer
+          );
+          
+          // Call initiatePayment on the contract
+          const tokenAddress = ethers.constants.AddressZero; // Native token (ZETA)
+          const data = ethers.utils.toUtf8Bytes(JSON.stringify({
+            orderId: orderDetails.orderId || Date.now().toString(),
+            merchant: orderDetails.merchant,
+            amount: orderDetails.amount,
+            currency: orderDetails.currency
+          }));
+          
+          const tx = await contract.initiatePayment(
+            recipientAddress,
+            amountInWei,
+            tokenAddress,
+            data,
+            { value: amountInWei }
+          );
+          
+          txHash = tx.hash;
+          
+          document.getElementById('loadingText').textContent = 'Transaction sent...';
+          document.getElementById('loadingSubtext').textContent = 'Waiting for confirmation';
+          
+          // Wait for confirmation
+          await tx.wait();
+        } else {
+          // Fallback: direct transaction if ethers.js not available
+          throw new Error('ethers.js not loaded');
+        }
+      } catch (contractError) {
+        console.error('Contract interaction error:', contractError);
+        // Fallback to simple transaction
+        txHash = await walletManager.sendTransaction(
+          recipientAddress,
+          amountInWei,
+          '0x'
+        );
+      }
+    } else {
+      // Fallback: simple transaction without contract
+      txHash = await walletManager.sendTransaction(
+        recipientAddress,
+        amountInWei,
+        '0x'
+      );
+    }
     
-    // Wait for confirmation (simplified - should listen to events)
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    document.getElementById('loadingText').textContent = 'Transaction confirmed!';
+    document.getElementById('loadingSubtext').textContent = 'Payment successful';
     
     // Notify background script
     chrome.runtime.sendMessage({
