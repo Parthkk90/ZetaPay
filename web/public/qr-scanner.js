@@ -102,35 +102,30 @@ class QRCodeScanner {
     });
   }
 
-  // Mock QR decoder (in production, use jsQR library)
+  // Decode QR code using jsQR library
   decodeQR(imageData) {
-    // This is a placeholder. In production, use jsQR:
-    // import jsQR from 'jsqr';
-    // const code = jsQR(imageData.data, imageData.width, imageData.height);
-    // return code?.data;
-
-    // For now, check if image looks like a QR code pattern
-    // by checking for high contrast patterns
-    const data = imageData.data;
-    let blackPixels = 0;
-    let whitePixels = 0;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      if (brightness < 50) blackPixels++;
-      if (brightness > 200) whitePixels++;
+    // Check if jsQR is available
+    if (typeof jsQR === 'undefined') {
+      console.warn('jsQR library not loaded. QR scanning disabled.');
+      return null;
     }
 
-    const totalPixels = data.length / 4;
-    const contrastRatio = (blackPixels + whitePixels) / totalPixels;
+    try {
+      // Use jsQR to decode the QR code
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
+      });
 
-    // QR codes typically have 40-60% high contrast pixels
-    if (contrastRatio > 0.4 && contrastRatio < 0.7) {
-      // Mock payment data (in production, this comes from jsQR)
-      return null; // Return null for now until jsQR is integrated
+      if (code && code.data) {
+        console.log('QR Code decoded:', code.data);
+        return code.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error decoding QR code:', error);
+      return null;
     }
-
-    return null;
   }
 
   // Handle detected QR code

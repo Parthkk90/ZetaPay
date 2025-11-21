@@ -102,6 +102,48 @@ async function handlePaymentFlow(orderDetails, tabId) {
 // ============================================
 
 let priceAlerts = [];
+let lastPrices = {};
+
+// Token ID mapping for CoinPaprika API
+const TOKEN_IDS = {
+  'BTC': 'btc-bitcoin',
+  'ETH': 'eth-ethereum',
+  'ZETA': 'zeta-zetachain',
+  'BNB': 'bnb-binance-coin',
+  'MATIC': 'matic-polygon'
+};
+
+async function fetchTokenPrice(tokenSymbol) {
+  try {
+    const tokenId = TOKEN_IDS[tokenSymbol];
+    if (!tokenId) {
+      console.error(`Unknown token: ${tokenSymbol}`);
+      return null;
+    }
+
+    const response = await fetch(`https://api.coinpaprika.com/v1/tickers/${tokenId}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const price = data.quotes?.USD?.price;
+    
+    if (price) {
+      lastPrices[tokenSymbol] = {
+        price,
+        timestamp: Date.now(),
+        change24h: data.quotes.USD.percent_change_24h
+      };
+    }
+
+    return price;
+  } catch (error) {
+    console.error(`Error fetching ${tokenSymbol} price:`, error);
+    return null;
+  }
+}
 
 async function checkPriceAlerts() {
   const alerts = await new Promise((resolve) => {
@@ -112,12 +154,44 @@ async function checkPriceAlerts() {
   
   priceAlerts = alerts;
   
-  // Check each alert (mock implementation)
+  // Check each alert
   for (const alert of priceAlerts) {
     if (alert.enabled) {
-      // In production, fetch actual prices from CoinGecko API
-      console.log(`Checking price alert: ${alert.token} at ${alert.targetPrice}`);
+      const currentPrice = await fetchTokenPrice(alert.token);
+      
+      if (currentPrice) {
+        // Check if price has crossed target
+        const previousPrice = lastPrices[alert.token]?.price;
+        
+        if (alert.condition === 'reaches' || !alert.condition) {
+          // Alert when price reaches or crosses target
+          if (currentPrice >= alert.targetPrice && (!previousPrice || previousPrice < alert.targetPrice)) {
+            triggerPriceAlert(alert, currentPrice, 'reached');
+          }
+        } else if (alert.condition === 'above') {
+          if (currentPrice > alert.targetPrice) {
+            triggerPriceAlert(alert, currentPrice, 'above');
+          }
+        } else if (alert.condition === 'below') {
+          if (currentPrice < alert.targetPrice) {
+            triggerPriceAlert(alert, currentPrice, 'below');
+          }
+        }
+      }
     }
+  }
+}
+
+function triggerPriceAlert(alert, currentPrice, status) {
+  const title = `${alert.token} Price Alert`;
+  const message = `${alert.token} is now $${currentPrice.toFixed(2)} (Target: $${alert.targetPrice})`;
+  
+  showBrowserNotification(title, message, 'info');
+  
+  // Optionally disable one-time alerts
+  if (!alert.recurring) {
+    alert.enabled = false;
+    chrome.storage.local.set({ priceAlerts });
   }
 }
 
