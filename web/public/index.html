@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZetaPay - Crypto Payment Gateway</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 380px;
+      min-height: 500px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #1f2937;
+    }
+
+    .container {
+      background: white;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      color: white;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .menu-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    .menu-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .wallet-info {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .wallet-address {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .network-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    /* States */
+    .state {
+      display: none;
+      padding: 24px;
+    }
+
+    .state.active {
+      display: block;
+    }
+
+    /* Not Connected State */
+    .connect-container {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .connect-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    .connect-container h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #1f2937;
+    }
+
+    .connect-container p {
+      color: #6b7280;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Payment State */
+    .payment-details {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .amount-display {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .amount-label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .amount-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .amount-currency {
+      font-size: 20px;
+      color: #6b7280;
+      margin-left: 8px;
+    }
+
+    .conversion-rate {
+      text-align: center;
+      color: #6b7280;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .payment-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .payment-info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .info-value {
+      color: #1f2937;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* Loading State */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+
+    .loading-subtext {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    /* Success State */
+    .success-container {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .success-icon {
+      width: 72px;
+      height: 72px;
+      background: #d1fae5;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 36px;
+    }
+
+    .tx-hash {
+      background: #f3f4f6;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      word-break: break-all;
+      margin: 20px 0;
+      color: #667eea;
+    }
+
+    /* Error State */
+    .error-container {
+      padding: 20px;
+      background: #fee2e2;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .error-title {
+      font-weight: 600;
+      color: #991b1b;
+      margin-bottom: 8px;
+    }
+
+    .error-message {
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .action-card {
+      background: #f9fafb;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+
+    .action-card:hover {
+      background: #f3f4f6;
+      border-color: #667eea;
+    }
+
+    .action-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .action-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    /* Price Ticker */
+    #priceTicker {
+      margin-top: 20px;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 16px 24px;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">
+          ⚡ ZetaPay
+        </div>
+        <button class="menu-btn" id="menuBtn">☰</button>
+      </div>
+      <div class="wallet-info" id="walletInfo" style="display: none;">
+        <div class="wallet-address" id="walletAddress">Not Connected</div>
+        <div>
+          <span class="network-badge" id="networkBadge">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Not Connected State -->
+    <div class="state active" id="notConnectedState">
+      <div class="connect-container">
+        <div class="connect-icon">🔐</div>
+        <h2>Connect Your Wallet</h2>
+        <p>Connect your Web3 wallet to start making crypto payments on any website.</p>
+        <button class="btn btn-primary" id="connectBtn">
+          <span>🦊</span>
+          Connect MetaMask
+        </button>
+        <button class="btn btn-secondary" id="viewHistoryBtn">
+          📊 View History
+        </button>
+      </div>
+    </div>
+
+    <!-- Connected - No Payment State -->
+    <div class="state" id="connectedState">
+      <div class="quick-actions">
+        <div class="action-card" id="historyAction">
+          <div class="action-icon">📊</div>
+          <div class="action-label">History</div>
+        </div>
+        <div class="action-card" id="settingsAction">
+          <div class="action-icon">⚙️</div>
+          <div class="action-label">Settings</div>
+        </div>
+        <div class="action-card" id="scanAction">
+          <div class="action-icon">📷</div>
+          <div class="action-label">Scan QR</div>
+        </div>
+        <div class="action-card" id="alertsAction">
+          <div class="action-icon">🔔</div>
+          <div class="action-label">Alerts</div>
+        </div>
+      </div>
+
+      <div id="priceTicker"></div>
+    </div>
+
+    <!-- Payment Pending State -->
+    <div class="state" id="paymentState">
+      <div class="payment-details">
+        <div class="amount-display">
+          <div class="amount-label">Amount</div>
+          <div>
+            <span class="amount-value" id="paymentAmount">0.00</span>
+            <span class="amount-currency" id="paymentCurrency">USD</span>
+          </div>
+        </div>
+
+        <div class="conversion-rate" id="conversionRate">
+          ≈ 0.00 ZETA
+        </div>
+
+        <div class="payment-info-row">
+          <span class="info-label">Merchant</span>
+          <span class="info-value" id="merchantName">-</span>
+        </div>
+        <div class="payment-info-row">
+          <span class="info-label">Network</span>
+          <span class="info-value" id="paymentNetwork">ZetaChain</span>
+        </div>
+        <div class="payment-info-row">
+          <span class="info-label">Gas Fee</span>
+          <span class="info-value" id="gasFee">~$0.50</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="confirmPaymentBtn">
+        Confirm Payment
+      </button>
+      <button class="btn btn-secondary" id="cancelPaymentBtn">
+        Cancel
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div class="state" id="loadingState">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Processing...</div>
+        <div class="loading-subtext" id="loadingSubtext">Please confirm in your wallet</div>
+      </div>
+    </div>
+
+    <!-- Success State -->
+    <div class="state" id="successState">
+      <div class="success-container">
+        <div class="success-icon">✓</div>
+        <h2>Payment Successful!</h2>
+        <p>Your transaction has been confirmed</p>
+        
+        <div class="tx-hash" id="txHash">0x123...abc</div>
+
+        <button class="btn btn-primary" id="viewTxBtn">
+          View on Explorer
+        </button>
+        <button class="btn btn-secondary" id="doneBtn">
+          Done
+        </button>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="state" id="errorState">
+      <div class="error-container">
+        <div class="error-title">Transaction Failed</div>
+        <div class="error-message" id="errorMessage">Something went wrong</div>
+      </div>
+      <button class="btn btn-primary" id="retryBtn">
+        Try Again
+      </button>
+      <button class="btn btn-secondary" id="closeErrorBtn">
+        Close
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div>v0.3.0</div>
+      <div>
+        <a href="https://zetachain.com" target="_blank">Powered by ZetaChain</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="wallet-manager.js"></script>
+  <script src="price-ticker.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
