@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZetaPay - Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .section {
+      padding: 30px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+    }
+
+    .setting-item:not(:last-child) {
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .setting-info h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 4px;
+    }
+
+    .setting-info p {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .toggle {
+      position: relative;
+      width: 52px;
+      height: 28px;
+      background: #d1d5db;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle.active {
+      background: #667eea;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(24px);
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #5568d3;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .alert-item {
+      background: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .alert-details {
+      flex: 1;
+    }
+
+    .alert-details h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 4px;
+    }
+
+    .alert-details p {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .remove-btn {
+      padding: 6px 12px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .success-message {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .network-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .network-card {
+      padding: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .network-card:hover {
+      border-color: #667eea;
+    }
+
+    .network-card.active {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+
+    .network-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 4px;
+    }
+
+    .network-status {
+      font-size: 12px;
+      color: #10b981;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚙️ Settings</h1>
+      <p>Customize your ZetaPay experience</p>
+    </div>
+
+    <!-- General Settings -->
+    <div class="section">
+      <div class="section-title">General</div>
+      
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>Auto-detect Payments</h3>
+          <p>Automatically detect checkout pages</p>
+        </div>
+        <div class="toggle active" id="autoDetect"></div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>Browser Notifications</h3>
+          <p>Get notified about payment status</p>
+        </div>
+        <div class="toggle active" id="notifications"></div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>Show Payment Button</h3>
+          <p>Display crypto payment button on checkout</p>
+        </div>
+        <div class="toggle active" id="showButton"></div>
+      </div>
+    </div>
+
+    <!-- Network Settings -->
+    <div class="section">
+      <div class="section-title">Preferred Network</div>
+      
+      <div class="network-grid">
+        <div class="network-card active" data-network="zetachain">
+          <div class="network-name">ZetaChain</div>
+          <div class="network-status">✓ Connected</div>
+        </div>
+        <div class="network-card" data-network="ethereum">
+          <div class="network-name">Ethereum</div>
+          <div class="network-status">Available</div>
+        </div>
+        <div class="network-card" data-network="bsc">
+          <div class="network-name">BSC</div>
+          <div class="network-status">Available</div>
+        </div>
+        <div class="network-card" data-network="polygon">
+          <div class="network-name">Polygon</div>
+          <div class="network-status">Available</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Price Alerts -->
+    <div class="section">
+      <div class="section-title">Price Alerts</div>
+      
+      <div id="alertsList"></div>
+
+      <div class="input-group">
+        <label>Token</label>
+        <select id="alertToken">
+          <option value="BTC">Bitcoin (BTC)</option>
+          <option value="ETH">Ethereum (ETH)</option>
+          <option value="ZETA">ZetaChain (ZETA)</option>
+          <option value="BNB">BNB</option>
+          <option value="MATIC">Polygon (MATIC)</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label>Target Price (USD)</label>
+        <input type="number" id="targetPrice" placeholder="50000" step="0.01">
+      </div>
+
+      <button class="btn" id="addAlertBtn">Add Price Alert</button>
+      <div class="success-message" id="alertSuccess">✓ Price alert added successfully</div>
+    </div>
+
+    <!-- Advanced Settings -->
+    <div class="section">
+      <div class="section-title">Advanced</div>
+      
+      <div class="input-group">
+        <label>Transaction Timeout (seconds)</label>
+        <input type="number" id="txTimeout" value="300" min="60" max="600">
+      </div>
+
+      <div class="input-group">
+        <label>Gas Price Preference</label>
+        <select id="gasPreference">
+          <option value="fast">Fast (Higher Fee)</option>
+          <option value="standard" selected>Standard</option>
+          <option value="slow">Slow (Lower Fee)</option>
+        </select>
+      </div>
+
+      <button class="btn">Save Advanced Settings</button>
+    </div>
+
+    <!-- Data Management -->
+    <div class="section">
+      <div class="section-title">Data Management</div>
+      
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>Export Transaction Data</h3>
+          <p>Download your transaction history as CSV</p>
+        </div>
+        <button class="btn" style="width: auto; padding: 8px 16px;" id="exportBtn">Export</button>
+      </div>
+
+      <button class="btn btn-danger" id="clearAllBtn">Clear All Data</button>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
