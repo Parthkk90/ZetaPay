@@ -9,8 +9,18 @@ const CONTRACT_CONFIG = {
   network: {
     chainId: '0x1b59', // 7001 in hex (ZetaChain Athens 3)
     chainName: 'ZetaChain Athens 3 Testnet',
-    rpcUrl: 'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
-    blockExplorer: 'https://athens.explorer.zetachain.com'
+    rpcUrls: [
+      'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
+      'https://rpc.ankr.com/zetachain_evm_athens_testnet',
+      'https://api.athens3.zetachain.com/evm'
+    ],
+    rpcUrl: 'https://rpc.ankr.com/zetachain_evm_athens_testnet', // Primary RPC
+    blockExplorer: 'https://athens.explorer.zetachain.com',
+    nativeCurrency: {
+      name: 'ZETA',
+      symbol: 'ZETA',
+      decimals: 18
+    }
   },
   
   // Contract ABI (only essential functions for the extension)

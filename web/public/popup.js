@@ -204,8 +204,13 @@ async function confirmPayment() {
                 params: [{
                   chainId: contractInterface.network.chainId,
                   chainName: contractInterface.network.chainName,
-                  rpcUrls: [contractInterface.network.rpcUrl],
-                  blockExplorerUrls: [contractInterface.network.blockExplorer]
+                  rpcUrls: contractInterface.network.rpcUrls || [contractInterface.network.rpcUrl],
+                  blockExplorerUrls: [contractInterface.network.blockExplorer],
+                  nativeCurrency: contractInterface.network.nativeCurrency || {
+                    name: 'ZETA',
+                    symbol: 'ZETA',
+                    decimals: 18
+                  }
                 }],
               });
             } else {
