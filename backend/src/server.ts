@@ -24,6 +24,7 @@ import liquidityRoutes from './routes/liquidity.routes';
 import privacyRoutes from './routes/privacy.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import userRoutes from './routes/user.routes';
 
 // Load environment variables
 dotenv.config();
@@ -74,6 +75,7 @@ app.use(`/api/${API_VERSION}/liquidity`, liquidityRoutes);
 app.use(`/api/${API_VERSION}/privacy`, privacyRoutes);
 app.use(`/api/${API_VERSION}/subscriptions`, subscriptionRoutes);
 app.use(`/api/${API_VERSION}/invoices`, invoiceRoutes);
+app.use(`/api/${API_VERSION}/users`, userRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {

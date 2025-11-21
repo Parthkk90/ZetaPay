@@ -1,5 +1,33 @@
 // Background service worker for ZetaPay extension
-console.log("ZetaPay background service worker loaded.");
+console.log('ZetaPay background service worker loaded.');
+
+// Import API client
+importScripts('api-client.js');
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+let isInitialized = false;
+
+async function initialize() {
+  if (isInitialized) return;
+  
+  try {
+    await api.init();
+    console.log('API client initialized');
+    
+    // Update badge on startup
+    updateBadge();
+    
+    isInitialized = true;
+  } catch (error) {
+    console.error('Initialization error:', error);
+  }
+}
+
+// Initialize when service worker starts
+initialize();
 
 // ============================================
 // NOTIFICATION MANAGER
@@ -71,10 +99,37 @@ async function updateBadge() {
 
 async function handlePaymentFlow(orderDetails, tabId) {
   try {
-    // Store order details
+    // Check if user is authenticated
+    if (!api.isAuthenticated()) {
+      // Request wallet connection
+      showBrowserNotification(
+        'Connect Wallet',
+        'Please connect your wallet to make payments',
+        'info'
+      );
+      
+      // Open extension popup for authentication
+      chrome.action.openPopup();
+      
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Create payment in backend
+    const payment = await api.createPayment({
+      amount: orderDetails.amount,
+      currency: orderDetails.currency,
+      merchant: orderDetails.merchant,
+      orderId: orderDetails.orderId || `EXT-${Date.now()}`,
+      description: orderDetails.description || `Payment to ${orderDetails.merchant}`,
+      platform: orderDetails.platform,
+      returnUrl: orderDetails.url,
+    });
+
+    // Store payment details
     await chrome.storage.local.set({ 
-      pendingOrder: {
-        ...orderDetails,
+      pendingPayment: {
+        ...payment,
+        orderDetails,
         tabId,
         timestamp: Date.now()
       }
@@ -90,9 +145,16 @@ async function handlePaymentFlow(orderDetails, tabId) {
       'info'
     );
     
-    return { success: true };
+    return { success: true, payment };
   } catch (error) {
     console.error('Payment flow error:', error);
+    
+    showBrowserNotification(
+      'Payment Error',
+      error.message || 'Failed to initialize payment',
+      'error'
+    );
+    
     return { success: false, error: error.message };
   }
 }
@@ -207,14 +269,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     },
     
     paymentCompleted: async () => {
+      // Save transaction locally
       await saveTransaction({
         txHash: message.txHash,
         amount: message.amount,
         currency: message.currency,
-        status: 'success'
+        status: 'success',
+        paymentId: message.paymentId,
       });
       
-      chrome.storage.local.remove('pendingOrder');
+      // Update payment status in backend
+      if (message.paymentId) {
+        try {
+          await api.updatePaymentStatus(message.paymentId, 'completed', message.txHash);
+        } catch (error) {
+          console.error('Failed to update payment status:', error);
+        }
+      }
+      
+      chrome.storage.local.remove('pendingPayment');
       
       // Notify content script
       if (sender.tab?.id) {
@@ -278,6 +351,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       alerts.push(message.alert);
       await chrome.storage.local.set({ priceAlerts: alerts });
       sendResponse({ success: true });
+    },
+    
+    authenticateUser: async () => {
+      try {
+        const result = await api.authenticate(message.walletAddress, message.signature, message.message);
+        sendResponse({ success: true, data: result });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    },
+    
+    getUserProfile: async () => {
+      try {
+        const profile = await api.getUserProfile();
+        sendResponse({ success: true, data: profile });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    },
+    
+    getPaymentHistory: async () => {
+      try {
+        const history = await api.getPaymentHistory({
+          limit: message.limit || 50,
+          offset: message.offset || 0,
+          status: message.status,
+        });
+        sendResponse({ success: true, data: history });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    },
+    
+    syncTransactions: async () => {
+      try {
+        // Get transactions from backend
+        const history = await api.getPaymentHistory({ limit: 100 });
+        
+        // Merge with local transactions
+        const localTxs = await getStoredTransactions();
+        const allTxs = [...history.payments, ...localTxs];
+        
+        // Remove duplicates by txHash
+        const uniqueTxs = allTxs.reduce((acc, tx) => {
+          const existing = acc.find(t => t.txHash === tx.txHash || t.id === tx.id);
+          if (!existing) acc.push(tx);
+          return acc;
+        }, []);
+        
+        // Save merged transactions
+        await chrome.storage.local.set({ transactions: uniqueTxs.slice(0, 100) });
+        
+        sendResponse({ success: true, count: uniqueTxs.length });
+      } catch (error) {
+        console.error('Sync error:', error);
+        sendResponse({ success: false, error: error.message });
+      }
     }
   };
   
