@@ -3,6 +3,8 @@
   "name": "ZetaPay",
   "version": "0.3.0",
   "description": "Pay with crypto on your favorite e-commerce sites via ZetaChain.",
+  "author": "ZetaPay Team",
+  "homepage_url": "https://github.com/Parthkk90/ZetaPay",
   "permissions": [
     "storage",
     "activeTab",

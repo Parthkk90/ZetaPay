@@ -13,19 +13,24 @@ class WalletManager {
   async init() {
     console.log('Wallet Manager initialized');
     
+    // Wait for ethereum provider to be injected (extension context)
+    await this.waitForProvider();
+    
     // Check if MetaMask is installed
-    if (typeof window.ethereum !== 'undefined') {
-      this.provider = window.ethereum;
-      
+    if (this.provider) {
       // Check if already connected
-      const accounts = await this.provider.request({ method: 'eth_accounts' });
-      if (accounts.length > 0) {
-        this.account = accounts[0];
-        this.isConnected = true;
-        await this.getChainId();
-        
-        // Authenticate with backend
-        await this.authenticateWithBackend();
+      try {
+        const accounts = await this.provider.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          this.account = accounts[0];
+          this.isConnected = true;
+          await this.getChainId();
+          
+          // Authenticate with backend
+          await this.authenticateWithBackend();
+        }
+      } catch (error) {
+        console.error('Error checking accounts:', error);
       }
       
       // Setup listeners
@@ -33,6 +38,30 @@ class WalletManager {
     } else {
       console.warn('MetaMask not detected');
     }
+  }
+
+  // Wait for ethereum provider (handles extension context delay)
+  async waitForProvider(maxAttempts = 10) {
+    for (let i = 0; i < maxAttempts; i++) {
+      // Check window.ethereum
+      if (typeof window !== 'undefined' && window.ethereum) {
+        this.provider = window.ethereum;
+        console.log('Provider found via window.ethereum');
+        return;
+      }
+      
+      // Check for ethereum in global scope
+      if (typeof ethereum !== 'undefined') {
+        this.provider = ethereum;
+        console.log('Provider found via global ethereum');
+        return;
+      }
+      
+      // Wait 100ms before next attempt
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.warn('Provider not found after waiting');
   }
 
   // Setup event listeners
@@ -67,8 +96,13 @@ class WalletManager {
   // Connect wallet
   async connect() {
     try {
+      // Wait for provider if not already available
       if (!this.provider) {
-        throw new Error('MetaMask not installed. Please install MetaMask to continue.');
+        await this.waitForProvider();
+      }
+      
+      if (!this.provider) {
+        throw new Error('MetaMask not installed. Please install MetaMask extension and refresh the page.');
       }
 
       // Request account access
@@ -77,7 +111,7 @@ class WalletManager {
       });
 
       if (accounts.length === 0) {
-        throw new Error('No accounts found');
+        throw new Error('No accounts found. Please unlock MetaMask.');
       }
 
       this.account = accounts[0];
@@ -96,6 +130,14 @@ class WalletManager {
       };
     } catch (error) {
       console.error('Connect error:', error);
+      
+      // Provide more helpful error messages
+      if (error.code === 4001) {
+        throw new Error('Connection request rejected. Please approve in MetaMask.');
+      } else if (error.message.includes('User rejected')) {
+        throw new Error('Connection request rejected. Please approve in MetaMask.');
+      }
+      
       throw error;
     }
   }

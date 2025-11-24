@@ -104,6 +104,11 @@ async function connectWallet() {
   try {
     showState('loading');
     document.getElementById('loadingText').textContent = 'Connecting wallet...';
+    document.getElementById('loadingSubtext').textContent = 'Checking for MetaMask...';
+    
+    // Reinitialize to ensure provider is detected
+    await walletManager.init();
+    
     document.getElementById('loadingSubtext').textContent = 'Please approve in MetaMask';
     
     const result = await walletManager.connect();
@@ -115,7 +120,14 @@ async function connectWallet() {
     }
   } catch (error) {
     console.error('Connect error:', error);
-    showError(error.message || 'Failed to connect wallet');
+    let errorMessage = error.message || 'Failed to connect wallet';
+    
+    // Add helpful hint if MetaMask not found
+    if (errorMessage.includes('MetaMask not installed')) {
+      errorMessage += '\n\nPlease:\n1. Install MetaMask extension\n2. Refresh this popup\n3. Try again';
+    }
+    
+    showError(errorMessage);
   }
 }
 
@@ -343,8 +355,32 @@ function showError(message) {
   showState('error');
 }
 
-function retryPayment() {
-  if (pendingPayment) {
+async function retryPayment() {
+  // If error was about MetaMask not detected, try reconnecting
+  if (pendingPayment && !walletManager.isConnected) {
+    try {
+      showState('loading');
+      document.getElementById('loadingText').textContent = 'Reconnecting...';
+      document.getElementById('loadingSubtext').textContent = 'Please wait';
+      
+      // Reinitialize wallet manager
+      await walletManager.init();
+      
+      // Try to connect
+      const result = await walletManager.connect();
+      
+      if (result.success) {
+        // Show payment state if we have pending payment
+        showState('payment');
+      } else {
+        showState('connected');
+      }
+    } catch (error) {
+      console.error('Retry error:', error);
+      showError(error.message || 'Failed to connect. Please make sure MetaMask is installed and unlocked.');
+    }
+  } else if (pendingPayment) {
+    // Just retry the payment
     showState('payment');
   } else {
     showState('connected');
