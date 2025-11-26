@@ -23,6 +23,7 @@
       background: #1a1b1f;
       border-radius: 0;
       overflow: hidden;
+      animation: fadeIn 0.5s ease;
     }
 
     /* Header */
@@ -169,7 +170,7 @@
     }
 
     .btn-primary:active {
-      transform: translateY(0);
+      transform: scale(0.98);
     }
 
     .btn-secondary {
@@ -182,6 +183,11 @@
     .btn-secondary:hover {
       background: #3d3e44;
       border-color: #667eea;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.98);
     }
 
     .btn:disabled {
@@ -202,6 +208,7 @@
     .payment-details:hover {
       border-color: #667eea;
       box-shadow: 0 0 20px rgba(102, 126, 234, 0.1);
+      transform: translateY(-2px);
     }
 
     .amount-display {
@@ -376,7 +383,7 @@
     }
 
     .action-card:active {
-      transform: translateY(0);
+      transform: scale(0.95);
     }
 
     .action-icon {
