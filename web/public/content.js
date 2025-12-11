@@ -96,8 +96,6 @@ function extractOrderDetails() {
   };
 }
 
-}
-
 // ============================================
 // 2. INJECT ZETAPAY PAYMENT BUTTON
 // ============================================
